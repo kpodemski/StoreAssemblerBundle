@@ -1,0 +1,8 @@
+{
+    "type": "paid",
+    "aliases": ["b2b-suite", "b2b-kit"],
+    "rector-sets": [
+        "Sylius\\SyliusRector\\Set\\SyliusPlus::B2B_SUITE",
+        "Sylius\\SyliusRector\\Set\\SyliusPlus::B2B_SUITE_21"
+    ]
+}

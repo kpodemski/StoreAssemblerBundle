@@ -14,21 +14,21 @@ return static function (RectorConfig $rectorConfig): void {
         return;
     }
 
-    $storeData = json_decode((string) file_get_contents($storePresetPath), true, 512, JSON_THROW_ON_ERROR);
+    $storeData = json_decode((string)file_get_contents($storePresetPath), true, 512, JSON_THROW_ON_ERROR);
     $plugins = $storeData['plugins'] ?? [];
     if (!is_array($plugins)) {
         return;
     }
 
-    foreach (array_keys($plugins) as $pluginName) {
+    foreach ($plugins as $pluginName => $pluginVersion) {
         try {
-            $manifestPath = ManifestLocator::locate($projectDir, $pluginName);
+            $manifestPath = ManifestLocator::locate($projectDir, $pluginName, is_string($pluginVersion) ? $pluginVersion : null);
         } catch (\RuntimeException) {
             continue;
         }
 
         try {
-            $manifestData = json_decode((string) file_get_contents($manifestPath), true, 512, JSON_THROW_ON_ERROR);
+            $manifestData = json_decode((string)file_get_contents($manifestPath), true, 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
             echo sprintf("Invalid JSON in plugin manifest %s: %s%s", $manifestPath, $e->getMessage(), PHP_EOL);
             continue;

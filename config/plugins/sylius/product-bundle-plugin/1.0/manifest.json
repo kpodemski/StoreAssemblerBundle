@@ -1,0 +1,6 @@
+{
+    "type": "open-source",
+    "rector-sets": [
+        "Sylius\\SyliusRector\\Set\\SyliusProductBundle::PRODUCT_BUNDLE"
+    ]
+}

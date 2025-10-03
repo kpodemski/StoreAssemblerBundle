@@ -1,0 +1,3 @@
+sylius_store_assembler_admin:
+    resource: '../src/Controller/Admin/'
+    type: annotation

@@ -1,0 +1,246 @@
+{% extends '@SyliusAdmin/layout.html.twig' %}
+
+{% block title %}Plugin Manager | {{ parent() }}{% endblock %}
+
+{% block content %}
+<div class="ui segment">
+    <h1 class="ui header">
+        <i class="puzzle piece icon"></i>
+        <div class="content">
+            Plugin Manager
+            <div class="sub header">Install and manage Sylius plugins</div>
+        </div>
+    </h1>
+
+    {% if installationStatus %}
+    <div class="ui info message" id="installation-status">
+        <i class="close icon"></i>
+        <div class="header">Installation in progress</div>
+        <p>Plugin: {{ installationStatus.plugin }}</p>
+        <div class="ui active progress" data-percent="0">
+            <div class="bar">
+                <div class="progress"></div>
+            </div>
+            <div class="label">Installing...</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="ui cards" id="plugin-list">
+        {% for plugin in plugins %}
+        <div class="card">
+            <div class="content">
+                <div class="header">{{ plugin.name }}</div>
+                <div class="meta">
+                    <span class="category">{{ plugin.vendor ?? 'Unknown vendor' }}</span>
+                </div>
+                <div class="description">
+                    {{ plugin.description ?? 'No description available' }}
+                </div>
+            </div>
+            <div class="extra content">
+                <div class="ui two buttons">
+                    <button class="ui primary button install-plugin" 
+                            data-plugin="{{ plugin.name }}"
+                            {% if installationStatus %}disabled{% endif %}>
+                        <i class="download icon"></i>
+                        Install
+                    </button>
+                    <a class="ui button" href="{{ plugin.repository ?? '#' }}" target="_blank">
+                        <i class="github icon"></i>
+                        Repository
+                    </a>
+                </div>
+            </div>
+            <div class="extra content">
+                <span class="right floated">
+                    <i class="star icon"></i>
+                    {{ plugin.stars ?? 0 }}
+                </span>
+                <span>
+                    <i class="code branch icon"></i>
+                    {{ plugin.version ?? 'latest' }}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="ui basic modal" id="install-modal">
+    <div class="ui icon header">
+        <i class="download icon"></i>
+        Install Plugin
+    </div>
+    <div class="content">
+        <p>Are you sure you want to install <strong id="plugin-name"></strong>?</p>
+        <p>This will lock the store during the installation process.</p>
+    </div>
+    <div class="actions">
+        <div class="ui red basic cancel inverted button">
+            <i class="remove icon"></i>
+            Cancel
+        </div>
+        <div class="ui green ok inverted button" id="confirm-install">
+            <i class="checkmark icon"></i>
+            Install
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentInstallationId = {% if installationStatus %}{{ installationStatus.id|json_encode|raw }}{% else %}null{% endif %};
+    let statusCheckInterval = null;
+
+    document.querySelectorAll('.install-plugin').forEach(button => {
+        button.addEventListener('click', function() {
+            const pluginName = this.getAttribute('data-plugin');
+            document.getElementById('plugin-name').textContent = pluginName;
+            
+            $('#install-modal')
+                .modal({
+                    onApprove: function() {
+                        installPlugin(pluginName);
+                    }
+                })
+                .modal('show');
+        });
+    });
+
+    function installPlugin(pluginName) {
+        fetch('{{ path('sylius_admin_plugin_install') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'plugin=' + encodeURIComponent(pluginName)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentInstallationId = data.installationId;
+                showInstallationStatus(pluginName);
+                startStatusChecking();
+                disableAllInstallButtons();
+            } else {
+                alert('Failed to start installation: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to start installation');
+        });
+    }
+
+    function showInstallationStatus(pluginName) {
+        const statusDiv = document.getElementById('installation-status');
+        if (!statusDiv) {
+            const newStatus = document.createElement('div');
+            newStatus.className = 'ui info message';
+            newStatus.id = 'installation-status';
+            newStatus.innerHTML = `
+                <i class="close icon"></i>
+                <div class="header">Installation in progress</div>
+                <p>Plugin: ${pluginName}</p>
+                <div class="ui active progress" data-percent="0">
+                    <div class="bar">
+                        <div class="progress"></div>
+                    </div>
+                    <div class="label">Installing...</div>
+                </div>
+            `;
+            document.querySelector('.ui.segment').insertBefore(newStatus, document.getElementById('plugin-list'));
+        }
+        statusDiv.style.display = 'block';
+    }
+
+    function startStatusChecking() {
+        if (statusCheckInterval) {
+            clearInterval(statusCheckInterval);
+        }
+
+        statusCheckInterval = setInterval(() => {
+            if (!currentInstallationId) {
+                clearInterval(statusCheckInterval);
+                return;
+            }
+
+            fetch('{{ path('sylius_admin_plugin_status', {installationId: '__ID__'}) }}'.replace('__ID__', currentInstallationId))
+                .then(response => response.json())
+                .then(data => {
+                    updateInstallationProgress(data);
+                    
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        clearInterval(statusCheckInterval);
+                        handleInstallationComplete(data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking status:', error);
+                });
+        }, 2000);
+    }
+
+    function updateInstallationProgress(data) {
+        const progressBar = document.querySelector('.ui.progress');
+        if (progressBar) {
+            const percent = data.progress || 0;
+            progressBar.setAttribute('data-percent', percent);
+            progressBar.querySelector('.bar').style.width = percent + '%';
+            progressBar.querySelector('.label').textContent = data.message || 'Installing...';
+        }
+    }
+
+    function handleInstallationComplete(data) {
+        const statusDiv = document.getElementById('installation-status');
+        
+        if (data.status === 'completed') {
+            statusDiv.className = 'ui success message';
+            statusDiv.innerHTML = `
+                <i class="close icon"></i>
+                <div class="header">Installation completed successfully!</div>
+                <p>Plugin ${data.plugin} has been installed.</p>
+            `;
+            
+            setTimeout(() => {
+                location.reload();
+            }, 3000);
+        } else {
+            statusDiv.className = 'ui error message';
+            statusDiv.innerHTML = `
+                <i class="close icon"></i>
+                <div class="header">Installation failed</div>
+                <p>${data.error || 'An error occurred during installation'}</p>
+            `;
+            enableAllInstallButtons();
+        }
+        
+        currentInstallationId = null;
+    }
+
+    function disableAllInstallButtons() {
+        document.querySelectorAll('.install-plugin').forEach(button => {
+            button.disabled = true;
+        });
+    }
+
+    function enableAllInstallButtons() {
+        document.querySelectorAll('.install-plugin').forEach(button => {
+            button.disabled = false;
+        });
+    }
+
+    if (currentInstallationId) {
+        startStatusChecking();
+    }
+
+    document.querySelectorAll('.message .close').forEach(closeBtn => {
+        closeBtn.addEventListener('click', function() {
+            this.closest('.message').style.display = 'none';
+        });
+    });
+});
+</script>
+{% endblock %}

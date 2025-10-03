@@ -1,0 +1,7 @@
+{
+    "type": "open-source",
+    "rector-sets": [
+        "Sylius\\SyliusRector\\Set\\SyliusAdyen::ADYEN_PLUGIN_20"
+    ],
+    "minimum-stability": "dev"
+}
