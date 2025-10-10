@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Sylius\StoreAssemblerBundle\Command;
+namespace Sylius\StoreAssemblerBundle\Fixture\Command;
 
+use Sylius\StoreAssemblerBundle\StorePreset\ConfigurationProviderInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -17,12 +18,12 @@ use Symfony\Component\Process\Process;
     hidden: true,
 )]
 /** @experimental */
-class FixtureLoadCommand extends Command
+final class LoadCommand extends Command
 {
-    use ConfigTrait;
-
-    public function __construct(private readonly string $projectDir)
-    {
+    public function __construct(
+        private readonly ConfigurationProviderInterface $configProvider,
+        private readonly string $projectDir,
+    ) {
         parent::__construct();
     }
 
@@ -31,9 +32,10 @@ class FixtureLoadCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         $io->section('[Fixture Loader] Loading fixtures suite');
-        $process = $this->runConsoleCommand([$this->getFixturesSuiteName(), '--no-interaction'], $io);
+        $process = $this->runConsoleCommand([$this->configProvider->getFixturesSuiteName(), '--no-interaction'], $io);
         if ($process->getExitCode() !== 0) {
             $io->error('Fixtures loading failed.');
+
             return Command::FAILURE;
         }
 
@@ -49,7 +51,7 @@ class FixtureLoadCommand extends Command
         $parts = array_merge(['bin/console', 'sylius:fixtures:load'], $arguments);
         $process = Process::fromShellCommandline(
             implode(' ', $parts),
-            $this->projectDir
+            $this->projectDir,
         );
 
         $process

@@ -1,5 +1,5 @@
 {
-    "type": "open-source",
+    "type": "community",
     "configurators": [
         {
             "class": "Sylius\\StoreAssemblerBundle\\Configurator\\YamlNodeConfigurator",

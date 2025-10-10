@@ -1,0 +1,6 @@
+{
+    "type": "community",
+    "rector-sets": [
+        "Sylius\\SyliusRector\\Set\\SyliusProductBundle::PRODUCT_BUNDLE"
+    ]
+}

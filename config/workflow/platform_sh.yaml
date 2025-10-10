@@ -1,0 +1,11 @@
+platform: platform_sh
+prepare:
+  - sylius_store_assembler.plugin.step.adjust_composer_stability
+  - sylius_store_assembler.plugin.step.configure_composer_repository
+  - sylius_store_assembler.plugin.step.install_community_plugins
+  - sylius_store_assembler.plugin.step.install_commercial_plugins
+  - sylius_store_assembler.plugin.step.process_rector_config
+install:
+  - sylius_store_assembler.plugin.step.validate_manifests
+  - sylius_store_assembler.plugin.step.execute_shell_commands
+  - sylius_store_assembler.plugin.step.run_configurators

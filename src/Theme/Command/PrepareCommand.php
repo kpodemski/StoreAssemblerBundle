@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Sylius\StoreAssemblerBundle\Command;
+namespace Sylius\StoreAssemblerBundle\Theme\Command;
 
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Process\Process;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Yaml\Yaml;
 
 #[AsCommand(
@@ -19,10 +19,8 @@ use Symfony\Component\Yaml\Yaml;
     hidden: true,
 )]
 /** @experimental */
-class ThemePrepareCommand extends Command
+final class PrepareCommand extends Command
 {
-    use ConfigTrait;
-
     private SymfonyStyle $io;
     private Filesystem $filesystem;
 
@@ -46,6 +44,7 @@ class ThemePrepareCommand extends Command
 
         if (!$process->isSuccessful()) {
             $this->io->error('Asset build failed.');
+
             return Command::FAILURE;
         }
 
@@ -58,8 +57,8 @@ class ThemePrepareCommand extends Command
         if (!$filesystem->exists($hooksConfigPath)) {
             $baseConfig = [
                 'sylius_twig_hooks' => [
-                    'hooks' => []
-                ]
+                    'hooks' => [],
+                ],
             ];
             $filesystem->dumpFile($hooksConfigPath, Yaml::dump($baseConfig, 8));
             $this->io->success(sprintf('Created new hook config: %s', $hooksConfigPath));
@@ -85,7 +84,7 @@ class ThemePrepareCommand extends Command
         $this->filesystem->mirror(
             originDir: $this->projectDir . '/store-preset/assets',
             targetDir: $this->projectDir . '/assets',
-            options: ['override' => true]
+            options: ['override' => true],
         );
         $this->io->success('Assets copied to ' . $this->projectDir . '/assets');
     }
@@ -150,7 +149,7 @@ class ThemePrepareCommand extends Command
     private function createBannerTemplate(): void
     {
         $twigPath = $this->projectDir . '/templates/shop/banner.html.twig';
-        $twigContent = <<<TWIG
+        $twigContent = <<<'TWIG'
 {# templates/shop/banner.html.twig #}
 <div class="w-100 d-flex justify-content-center align-items-center position-relative">
     <img src="{{ asset('build/app/shop/images/banner.png', 'app.shop') }}" class="img-fluid" alt="Banner shop" />
@@ -185,7 +184,7 @@ TWIG;
     private function createLogoTemplate(): void
     {
         $twigPath = $this->projectDir . '/templates/shop/logo.html.twig';
-        $twigContent = <<<TWIG
+        $twigContent = <<<'TWIG'
 {# templates/shop/logo.html.twig #}
 <div class="col">
     <a href="{{ path('sylius_shop_homepage') }}">
